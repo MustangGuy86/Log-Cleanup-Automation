@@ -1,171 +1,130 @@
-# Log-Cleanup-Automation
+# Log Cleanup Automation
 
-Project Description
+## Project Overview
 
-This project involves creating a Python script to automatically clean up old log files from a specified directory. The script ensures that only the most recent log files are retained, removing those that exceed a specified retention period. Additionally, it generates a summary of deleted files for record-keeping.
-Preliminary Steps
+This project involves creating a Python script to automate the cleanup of old log files and scheduling it to run periodically using cron. It demonstrates skills in Python scripting, file management, and task automation.
+
+## Preliminary Steps
 
 Before starting with the script setup, ensure your VM is prepared and configured correctly.
-1. Prepare the VM
 
-    Update the System
+1. **Prepare the VM**
 
-    Ensure your VM is up-to-date with the latest packages and security updates:
+    **Update the System**
+    ```bash
+    sudo apt update
+    sudo apt upgrade -y
+    ```
 
-    bash
+    **Install Python 3**
+    ```bash
+    python3 --version
+    sudo apt install python3 python3-pip -y
+    ```
 
-sudo apt update
-sudo apt upgrade -y
+    **Create Required Directories**
+    ```bash
+    mkdir -p /home/cgoetz/logs
+    chmod 755 /home/cgoetz/logs
+    ```
 
-Install Python 3
+    **Create a Virtual Environment (Optional)**
+    ```bash
+    python3 -m venv myenv
+    source myenv/bin/activate
+    ```
 
-Check if Python 3 is installed. If not, install it:
-
-bash
-
-python3 --version
-sudo apt install python3 python3-pip -y
-
-Create Required Directories
-
-Set up the directories for logs and the summary file:
-
-bash
-
-mkdir -p /home/cgoetz/logs
-
-Ensure you have write permissions for this directory:
-
-bash
-
-chmod 755 /home/cgoetz/logs
-
-Create a Virtual Environment (Optional)
-
-For isolating dependencies, you may want to create a Python virtual environment:
-
-bash
-
-python3 -m venv myenv
-source myenv/bin/activate
-
-Install Required Python Packages
-
-Install any necessary Python packages (though for this script, no additional packages are needed):
-
-bash
-
+    **Install Required Python Packages**
+    ```bash
     pip install psutil
+    ```
 
-Steps to Set Up and Test the Project
-1. Setup the Python Script
+## Setup and Test
 
-    Create the Script
+1. **Create the Script**
 
-    Create a Python script named log_cleanup.py with the following content:
+    Create a Python script named `log_cleanup.py` with the following content:
+    ```python
+    import os
+    import time
 
-    python
+    LOG_DIR = '/home/cgoetz/logs'
+    RETENTION_DAYS = 7
+    SUMMARY_FILE = '/home/cgoetz/cleanup_summary.txt'
 
-import os
-import time
+    def delete_old_logs():
+        current_time = time.time()
+        cutoff_time = current_time - (RETENTION_DAYS * 86400)
+        deleted_files = []
 
-LOG_DIR = '/home/cgoetz/logs'
-RETENTION_DAYS = 7
-SUMMARY_FILE = '/home/cgoetz/cleanup_summary.txt'
+        for filename in os.listdir(LOG_DIR):
+            file_path = os.path.join(LOG_DIR, filename)
+            if os.path.isfile(file_path):
+                file_mtime = os.path.getmtime(file_path)
+                if file_mtime < cutoff_time:
+                    os.remove(file_path)
+                    deleted_files.append(filename)
 
-def delete_old_logs():
-    current_time = time.time()
-    cutoff_time = current_time - (RETENTION_DAYS * 86400)
-    deleted_files = []
+        with open(SUMMARY_FILE, 'w') as summary_file:
+            summary_file.write(f"Deleted files:\n")
+            for file in deleted_files:
+                summary_file.write(f"{file}\n")
 
-    for filename in os.listdir(LOG_DIR):
-        file_path = os.path.join(LOG_DIR, filename)
-        if os.path.isfile(file_path):
-            file_mtime = os.path.getmtime(file_path)
-            if file_mtime < cutoff_time:
-                os.remove(file_path)
-                deleted_files.append(filename)
+    if __name__ == "__main__":
+        delete_old_logs()
+    ```
 
-    with open(SUMMARY_FILE, 'w') as summary_file:
-        summary_file.write(f"Deleted files:\n")
-        for file in deleted_files:
-            summary_file.write(f"{file}\n")
-
-if __name__ == "__main__":
-    delete_old_logs()
-
-Ensure Script Permissions
-
-Make sure the script has the necessary permissions to execute:
-
-bash
-
+2. **Ensure Script Permissions**
+    ```bash
     chmod +x /home/cgoetz/log_cleanup.py
+    ```
 
-2. Test the Script
+3. **Run the Script Manually**
+    ```bash
+    python3 /home/cgoetz/log_cleanup.py
+    ```
 
-    Run the Script Manually
+4. **Check the Log Directory and Summary File**
+    ```bash
+    ls -lh /home/cgoetz/logs
+    cat /home/cgoetz/cleanup_summary.txt
+    ```
 
-    Execute the script to ensure it works correctly:
+5. **Verify Permissions**
+    ```bash
+    ls -l /home/cgoetz/logs
+    ls -l /home/cgoetz/cleanup_summary.txt
+    ```
 
-    bash
-
-python3 /home/cgoetz/log_cleanup.py
-
-Check the log directory and the summary file:
-
-bash
-
-ls -lh /home/cgoetz/logs
-cat /home/cgoetz/cleanup_summary.txt
-
-Verify that old files have been removed and that the summary file reflects the correct information.
-
-Verify Permissions
-
-Confirm that the script has the right permissions:
-
-bash
-
-ls -l /home/cgoetz/logs
-ls -l /home/cgoetz/cleanup_summary.txt
-
-Ensure the script has write permissions for the directory and the summary file.
-
-Schedule with Cron
+## Schedule with Cron
 
 To automate the script, schedule it to run periodically using cron:
 
-bash
+1. **Edit Crontab**
+    ```bash
+    crontab -e
+    ```
 
-crontab -e
+2. **Add Cron Job**
+    ```bash
+    0 0 * * * /usr/bin/python3 /home/cgoetz/log_cleanup.py
+    ```
 
-Add the following line to run the script daily at midnight:
+3. **Confirm Cron Job**
+    ```bash
+    crontab -l
+    ```
 
-bash
-
-0 0 * * * /usr/bin/python3 /home/cgoetz/log_cleanup.py
-
-Confirm the cron job is set up correctly:
-
-bash
-
-crontab -l
-
-You can also manually execute the cron job command to test:
-
-bash
-
+4. **Test the Cron Job Command**
+    ```bash
     /usr/bin/python3 /home/cgoetz/log_cleanup.py
+    ```
 
-    Monitor the log directory and summary file for accuracy.
+## Handle Issues
 
-3. Handle Issues
+- **FileNotFoundError**: If you encounter a `FileNotFoundError`, ensure that the specified log directory and summary file paths exist and are correctly set in the script.
+- **Permissions Errors**: If there are permission issues, verify and adjust the permissions of the log directory and summary file as needed.
 
-    FileNotFoundError: If you encounter a FileNotFoundError, ensure that the specified log directory and summary file paths exist and are correctly set in the script.
+## Conclusion
 
-    Permissions Errors: If there are permission issues, verify and adjust the permissions of the log directory and summary file as needed.
-
-Conclusion
-
-This project demonstrates a fundamental skill in automation and file management using Python. By automating log cleanup, it showcases your ability to manage system resources efficiently and maintain a clean and organized logging environment. The project also highlights your knowledge of Python scripting, file operations, and scheduling tasks using cron.
+This project demonstrates a fundamental skill in automation and file management using Python. By automating log cleanup, it showcases your ability to manage system resources efficiently and maintain a clean and organized logging environment. The project highlights your knowledge of Python scripting, file operations, and scheduling tasks using cron.
